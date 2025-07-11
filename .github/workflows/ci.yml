@@ -15,14 +15,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Install system dependencies for trading
+        if: matrix.service == 'trading'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libta-lib0 libta-lib0-dev
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      
       - name: Install dependencies
         run: |
           cd ${{ matrix.service }}
           pip install -r requirements.txt
+      
       - name: Run tests
         run: |
           cd ${{ matrix.service }}

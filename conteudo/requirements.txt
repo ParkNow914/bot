@@ -1,2 +1,2 @@
-gpt4all
-pytest 
+gpt4all>=2.0.0
+pytest>=7.0.0 
