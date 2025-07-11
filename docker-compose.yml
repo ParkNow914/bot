@@ -9,19 +9,49 @@ services:
       - afiliados
       - arbitragem
       - conteudo
+    networks:
+      - superbot-net
+    environment:
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+
   trading:
     build: ./trading
     environment:
-      - DB_URL=postgres://postgres:postgres@postgres:5432/superbot
-      - REDIS_URL=redis://redis:6379/0
+      - DB_URL=${DB_URL}
+      - REDIS_URL=${REDIS_URL}
+    networks:
+      - superbot-net
+    volumes:
+      - trading-logs:/app/logs
+
   dropshipping:
     build: ./dropshipping
+    networks:
+      - superbot-net
+    volumes:
+      - dropshipping-logs:/app/logs
+
   afiliados:
     build: ./afiliados
+    networks:
+      - superbot-net
+    volumes:
+      - afiliados-logs:/app/logs
+
   arbitragem:
     build: ./arbitragem
+    networks:
+      - superbot-net
+    volumes:
+      - arbitragem-logs:/app/logs
+
   conteudo:
     build: ./conteudo
+    networks:
+      - superbot-net
+    volumes:
+      - conteudo-logs:/app/logs
+
   airflow:
     build: ./airflow
     depends_on:
@@ -30,35 +60,42 @@ services:
       - afiliados
       - arbitragem
       - conteudo
+    networks:
+      - superbot-net
+
   postgres:
     image: postgres:13
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=superbot
-    ports:
-      - "5432:5432"
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - superbot-net
+
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - superbot-net
+    # Se desejar persistência, descomente a linha abaixo
+    # volumes:
+    #   - redis-data:/data
 
-  # Monitoramento - Loki
   loki:
     image: grafana/loki:2.9.0
-    ports:
-      - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    networks:
+      - superbot-net
 
-  # Monitoramento - Prometheus
   prometheus:
     image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -66,26 +103,41 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+    networks:
+      - superbot-net
 
-  # Monitoramento - Grafana
   grafana:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - superbot-net
 
-  # Monitoramento - Alertmanager
   alertmanager:
     image: prom/alertmanager:latest
-    ports:
-      - "9093:9093"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - superbot-net
 
 volumes:
-  grafana-storage: 
+  grafana-storage:
+  postgres-data:
+  prometheus-data:
+  loki-data:
+  trading-logs:
+  dropshipping-logs:
+  afiliados-logs:
+  arbitragem-logs:
+  conteudo-logs:
+  # redis-data: # descomente se desejar persistência para o Redis
+
+networks:
+  superbot-net:
+    driver: bridge

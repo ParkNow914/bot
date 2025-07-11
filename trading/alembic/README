@@ -1,0 +1,9 @@
+# Migrações Alembic - trading
+
+Para rodar as migrações manualmente:
+
+```
+docker-compose exec trading alembic upgrade head
+```
+
+As migrações são aplicadas automaticamente ao subir o container (ver Dockerfile). 

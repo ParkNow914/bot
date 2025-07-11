@@ -9,10 +9,33 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import json
 import os
+from fastapi import FastAPI
+import threading
+from prometheus_fastapi_instrumentator import Instrumentator
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
+# Configurar logging para arquivo e stdout
+log_dir = '/app/logs'
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'arbitragem.log')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
+
+# FastAPI para healthcheck
+app = FastAPI(title="Arbitragem Service", version="1.0.0")
+
+# Instrumentação Prometheus
+Instrumentator().instrument(app).expose(app, include_in_schema=False, should_gzip=True)
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}
 
 class SuperBotArbitragem:
     def __init__(self):
@@ -229,6 +252,12 @@ class SuperBotArbitragem:
 """
         return html
 
+def start_api():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
 if __name__ == "__main__":
+    api_thread = threading.Thread(target=start_api, daemon=True)
+    api_thread.start()
     bot = SuperBotArbitragem()
     bot.start() 

@@ -1,9 +1,20 @@
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import time
 import logging
+from dotenv import load_dotenv
+from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import AuthJWTException
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import redis
+
+# Carregar variáveis do .env
+load_dotenv()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -11,14 +22,34 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Super-Bot API Gateway", version="1.0.0")
 
+# Configurar Redis para rate limiting
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+limiter = Limiter(key_func=get_remote_address, storage_uri=redis_url)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Configurar CORS
+# Em produção, troque allow_origins para os domínios confiáveis
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Exemplo: ["https://seusite.com"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configuração do JWT
+class Settings(BaseModel):
+    authjwt_secret_key: str = os.getenv("GATEWAY_SECRET", "supersecret")
+
+@AuthJWT.load_config
+def get_config():
+    return Settings()
+
+# Tratamento de erro JWT
+@app.exception_handler(AuthJWTException)
+def authjwt_exception_handler(request, exc):
+    return HTTPException(status_code=exc.status_code, detail=exc.message)
 
 # Modelos Pydantic
 class TradingStatus(BaseModel):
@@ -51,6 +82,14 @@ class Article(BaseModel):
     topic: str
     content: str
     formats: List[str]
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserOut(BaseModel):
+    username: str
+    email: str
 
 # Dados simulados
 trading_data = {
@@ -176,6 +215,23 @@ def get_system_logs():
             {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "level": "INFO", "message": "Todos os módulos ativos"}
         ]
     }
+
+@app.post("/login")
+def login(user: UserLogin, Authorize: AuthJWT = Depends()):
+    # Exemplo simples: usuário fixo
+    if user.username == "admin" and user.password == "admin":
+        access_token = Authorize.create_access_token(subject=user.username)
+        return {"access_token": access_token}
+    raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
+
+# Exemplo de rota protegida
+from slowapi.decorator import limiter
+@app.get("/usuario/me", response_model=UserOut)
+@limiter.limit("10/minute")
+def get_me(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    current_user = Authorize.get_jwt_subject()
+    return {"username": current_user, "email": f"{current_user}@superbot.com"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -155,3 +155,27 @@ docker-compose logs -f trading
 ```
 
 --- 
+
+# Deploy em Railway
+
+1. Crie uma conta gratuita em https://railway.app
+2. Clique em "New Project" > "Deploy from GitHub repo"
+3. Selecione este repositório e aguarde o build automático
+4. Configure as variáveis de ambiente (.env) no painel Railway
+5. Railway detecta automaticamente o Dockerfile/docker-compose.yml
+6. Acesse a URL gerada para testar seu serviço
+
+# Deploy em Render
+
+1. Crie uma conta gratuita em https://render.com
+2. Clique em "New Web Service" > "Connect a repository"
+3. Escolha este repositório
+4. Configure o ambiente para Docker
+5. Adicione variáveis de ambiente conforme seu .env
+6. Render faz o build e deploy automático
+7. Acesse a URL gerada para testar
+
+# Dicas Gerais
+- Sempre configure as variáveis de ambiente de produção no painel da plataforma
+- Para múltiplos serviços, use Railway/Render YAML ou suba cada serviço como um container separado
+- Consulte a documentação oficial de cada plataforma para detalhes avançados 

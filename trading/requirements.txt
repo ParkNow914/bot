@@ -1,3 +1,4 @@
 freqtrade>=2025.6
 pandas>=2.0.0
 pytest>=7.0.0 
+alembic 
