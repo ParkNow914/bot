@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'superbot-gateway'
+    static_configs:
+      - targets: ['gateway:80']
+    metrics_path: '/metrics'
+
+  - job_name: 'superbot-trading'
+    static_configs:
+      - targets: ['trading:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'superbot-dropshipping'
+    static_configs:
+      - targets: ['dropshipping:8001']
+    metrics_path: '/metrics'
+
+  - job_name: 'superbot-afiliados'
+    static_configs:
+      - targets: ['afiliados:8002']
+    metrics_path: '/metrics'
+
+  - job_name: 'superbot-arbitragem'
+    static_configs:
+      - targets: ['arbitragem:8003']
+    metrics_path: '/metrics'
+
+  - job_name: 'superbot-conteudo'
+    static_configs:
+      - targets: ['conteudo:8004']
+    metrics_path: '/metrics' 
