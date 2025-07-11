@@ -1,0 +1,44 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - trading
+      - dropshipping
+      - afiliados
+      - arbitragem
+      - conteudo
+  trading:
+    build: ./trading
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/superbot
+      - REDIS_URL=redis://redis:6379/0
+  dropshipping:
+    build: ./dropshipping
+  afiliados:
+    build: ./afiliados
+  arbitragem:
+    build: ./arbitragem
+  conteudo:
+    build: ./conteudo
+  airflow:
+    build: ./airflow
+    depends_on:
+      - trading
+      - dropshipping
+      - afiliados
+      - arbitragem
+      - conteudo
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=superbot
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379" 
